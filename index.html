@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Valentine?</title>
+
+<style>
+body {
+font-family: Arial, sans-serif;
+text-align: center;
+margin-top: 100px;
+background-color: #ffe6eb;
+overflow: hidden;
+}
+
+h1 {
+font-size: 2.5rem;
+}
+
+.buttons {
+position: relative;
+margin-top: 50px;
+height: 200px;
+}
+
+button {
+font-size: 1.2rem;
+padding: 15px 30px;
+border-radius: 10px;
+border: none;
+cursor: pointer;
+}
+
+#yesBtn {
+background-color: #ff4d6d;
+color: white;
+}
+
+#noBtn {
+position: absolute;
+background-color: #999;
+color: white;
+left: 55%;
+top: 40%;
+}
+
+img {
+max-width: 300px;
+margin-top: 30px;
+}
+
+#retryBtn {
+margin-top: 20px;
+background-color: #333;
+color: white;
+}
+
+.confetti {
+position: fixed;
+width: 10px;
+height: 10px;
+top: -10px;
+animation: fall linear forwards;
+}
+
+@keyframes fall {
+to {
+transform: translateY(110vh) rotate(360deg);
+}
+}
+</style>
+</head>
+
+<body>
+
+<h1 id="question">Will you be my valentine? ❤️</h1>
+
+<div class="buttons">
+<button id="yesBtn">Yes</button>
+<button id="noBtn">No</button>
+</div>
+
+<div id="result"></div>
+
+<script>
+const noBtn = document.getElementById("noBtn");
+const yesBtn = document.getElementById("yesBtn");
+const result = document.getElementById("result");
+const buttons = document.querySelector(".buttons");
+
+let attempts = 0;
+const MAX_ATTEMPTS = 5;
+
+document.addEventListener("mousemove", (e) => {
+if (attempts >= MAX_ATTEMPTS) return;
+
+const rect = noBtn.getBoundingClientRect();
+const distance = Math.hypot(
+e.clientX - (rect.left + rect.width / 2),
+e.clientY - (rect.top + rect.height / 2)
+);
+
+if (distance < 120) {
+moveNoButton();
+attempts++;
+
+if (attempts >= MAX_ATTEMPTS) {
+showCatGun();
+}
+}
+});
+
+function moveNoButton() {
+const x = Math.random() * (window.innerWidth - 100);
+const y = Math.random() * (window.innerHeight - 100);
+noBtn.style.left = `${x}px`;
+noBtn.style.top = `${y}px`;
+}
+
+function showCatGun() {
+buttons.style.display = "none";
+document.getElementById("question").textContent = "You tried,wrong choice 😼";
+
+result.innerHTML = `
+<img src="cat_gun.jpg" alt="Cat with gun">
+<br>
+<button id="retryBtn">Retry</button>
+`;
+
+document.getElementById("retryBtn").addEventListener("click", resetApp);
+}
+
+function resetApp() {
+attempts = 0;
+result.innerHTML = "";
+buttons.style.display = "block";
+document.getElementById("question").textContent = "Will you be my valentine? ❤️";
+}
+
+yesBtn.addEventListener("click", () => {
+buttons.style.display = "none";
+document.getElementById("question").textContent = "Best choice 💖.i love you yasamin";
+
+result.innerHTML = `
+<img src="yes_image.jpg" alt="Valentine accepted">
+`;
+
+launchConfetti();
+});
+
+function launchConfetti() {
+for (let i = 0; i < 150; i++) {
+const confetti = document.createElement("div");
+confetti.classList.add("confetti");
+confetti.style.left = Math.random() * 100 + "vw";
+confetti.style.backgroundColor =
+`hsl(${Math.random() * 360}, 100%, 50%)`;
+confetti.style.animationDuration =
+(Math.random() * 2 + 2) + "s";
+document.body.appendChild(confetti);
+
+setTimeout(() => confetti.remove(), 4000);
+}
+}
+</script>
+
+</body>
+</html>
