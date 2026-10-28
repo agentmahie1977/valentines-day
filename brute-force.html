@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brute-Force Sandbox</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --panel: #181b24;
+    --panel-2: #20242f;
+    --border: #2b303d;
+    --text: #e6e8ee;
+    --muted: #9aa3b2;
+    --accent: #ff4d6d;
+    --accent-2: #4da3ff;
+    --ok: #3ddc84;
+    --warn: #ffb020;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+  header h1 { font-size: 1.8rem; margin: 0 0 4px; }
+  header p { color: var(--muted); margin: 0 0 20px; }
+  .note {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--warn);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-bottom: 24px;
+  }
+  .note b { color: var(--text); }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .card h2 { margin: 0 0 14px; font-size: 1.1rem; }
+  label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+  .row { display: flex; flex-wrap: wrap; gap: 16px; }
+  .row > div { flex: 1 1 200px; }
+  select, input {
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 1rem;
+    font-family: var(--mono);
+  }
+  .charsets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .charsets label {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    padding: 6px 10px; border-radius: 8px; margin: 0; cursor: pointer;
+    color: var(--text); font-size: 0.9rem;
+  }
+  .charsets input { width: auto; }
+  .buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+  button {
+    font-size: 1rem; padding: 11px 20px; border-radius: 8px;
+    border: none; cursor: pointer; font-weight: 600;
+  }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .stat {
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px;
+  }
+  .stat .k { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat .v { font-size: 1.25rem; font-family: var(--mono); margin-top: 4px; word-break: break-all; }
+  .current {
+    font-family: var(--mono); font-size: 1.6rem; letter-spacing: 2px;
+    text-align: center; padding: 18px; background: var(--panel-2);
+    border: 1px solid var(--border); border-radius: 8px; min-height: 28px;
+  }
+  .current.found { color: var(--ok); border-color: var(--ok); }
+  .bar { height: 10px; background: var(--panel-2); border-radius: 999px; overflow: hidden; margin: 14px 0 6px; border: 1px solid var(--border); }
+  .bar > div { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width 0.1s linear; }
+  .bar-label { font-size: 0.8rem; color: var(--muted); text-align: right; }
+  .accent { color: var(--accent-2); }
+  .ok { color: var(--ok); }
+  code { font-family: var(--mono); background: var(--panel-2); padding: 1px 5px; border-radius: 4px; }
+  footer { text-align: center; color: var(--muted); font-size: 0.8rem; margin-top: 30px; }
+  a { color: var(--accent-2); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🔓 Brute-Force Sandbox</h1>
+    <p>A self-contained lab for learning how brute-force search works.</p>
+  </header>
+
+  <div class="note">
+    <b>Scope:</b> This tool only attacks a secret it generates in your own browser,
+    entirely offline. It makes no network requests and cannot reach any external
+    system or account. It's for understanding keyspace size, attempt rates, and
+    why length and character variety matter — the same lessons a CTF or an
+    authorized security exercise teaches.
+  </div>
+
+  <div class="card">
+    <h2>1. Define the target</h2>
+    <div class="row">
+      <div>
+        <label for="length">Secret length</label>
+        <input id="length" type="number" min="1" max="8" value="4">
+      </div>
+      <div>
+        <label>Character set</label>
+        <div class="charsets">
+          <label><input type="checkbox" class="cs" value="digits" checked> digits (0-9)</label>
+          <label><input type="checkbox" class="cs" value="lower"> a-z</label>
+          <label><input type="checkbox" class="cs" value="upper"> A-Z</label>
+          <label><input type="checkbox" class="cs" value="symbols"> !@#$%</label>
+        </div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:16px;">
+      <div>
+        <label for="secretMode">Secret value</label>
+        <select id="secretMode">
+          <option value="random">Random (hidden)</option>
+          <option value="custom">Custom (I'll type it)</option>
+        </select>
+      </div>
+      <div id="customWrap" style="display:none;">
+        <label for="customSecret">Custom secret</label>
+        <input id="customSecret" type="text" placeholder="must match charset & length">
+      </div>
+    </div>
+    <div class="buttons">
+      <button class="btn-secondary" id="genBtn">Generate target</button>
+    </div>
+    <div class="stats" style="margin-top:16px;">
+      <div class="stat"><div class="k">Keyspace size</div><div class="v" id="keyspace">—</div></div>
+      <div class="stat"><div class="k">Worst case @ 1M/s</div><div class="v" id="worstCase">—</div></div>
+      <div class="stat"><div class="k">Target status</div><div class="v" id="targetStatus">not set</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2. Run the attack</h2>
+    <div class="row">
+      <div>
+        <label for="order">Search order</label>
+        <select id="order">
+          <option value="sequential">Sequential (0000, 0001, …)</option>
+          <option value="random">Random guesses</option>
+        </select>
+      </div>
+    </div>
+    <div class="buttons">
+      <button class="btn-primary" id="startBtn" disabled>Start</button>
+      <button class="btn-secondary" id="stopBtn" disabled>Stop</button>
+      <button class="btn-secondary" id="resetBtn">Reset</button>
+    </div>
+
+    <div class="bar"><div id="barFill"></div></div>
+    <div class="bar-label" id="barLabel">0%</div>
+
+    <div class="current" id="current" style="margin:14px 0;">—</div>
+
+    <div class="stats">
+      <div class="stat"><div class="k">Attempts</div><div class="v" id="attempts">0</div></div>
+      <div class="stat"><div class="k">Rate</div><div class="v" id="rate">0 /s</div></div>
+      <div class="stat"><div class="k">Elapsed</div><div class="v" id="elapsed">0.0s</div></div>
+      <div class="stat"><div class="k">Result</div><div class="v" id="result">—</div></div>
+    </div>
+  </div>
+
+  <footer>
+    Offline educational tool · no data leaves this page ·
+    <a href="index.html">← back</a>
+  </footer>
+</div>
+
+<script>
+const CHARSETS = {
+  digits:  "0123456789",
+  lower:   "abcdefghijklmnopqrstuvwxyz",
+  upper:   "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  symbols: "!@#$%"
+};
+
+const $ = id => document.getElementById(id);
+let target = null;       // the secret string
+let alphabet = "";       // active character set
+let length = 4;
+let keyspace = 0;
+let running = false;
+let attempts = 0;
+let startTime = 0;
+let rafId = null;
+let seqIndex = 0;        // for sequential search
+
+function activeAlphabet() {
+  const picks = [...document.querySelectorAll(".cs:checked")].map(c => c.value);
+  return picks.map(p => CHARSETS[p]).join("");
+}
+
+function fmt(n) {
+  return n.toLocaleString("en-US");
+}
+
+function humanTime(seconds) {
+  if (!isFinite(seconds)) return "∞";
+  if (seconds < 1) return (seconds * 1000).toFixed(0) + " ms";
+  if (seconds < 60) return seconds.toFixed(1) + " s";
+  if (seconds < 3600) return (seconds / 60).toFixed(1) + " min";
+  if (seconds < 86400) return (seconds / 3600).toFixed(1) + " hr";
+  if (seconds < 31536000) return (seconds / 86400).toFixed(1) + " days";
+  const years = seconds / 31536000;
+  if (years > 1e6) return (years / 1e6).toPrecision(3) + " M-years";
+  return years.toFixed(1) + " years";
+}
+
+// Convert a numeric index into the corresponding string in the alphabet (base-N counter)
+function indexToGuess(index) {
+  const base = alphabet.length;
+  let out = "";
+  for (let i = 0; i < length; i++) {
+    out = alphabet[index % base] + out;
+    index = Math.floor(index / base);
+  }
+  return out;
+}
+
+function randomGuess() {
+  let out = "";
+  for (let i = 0; i < length; i++) {
+    out += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return out;
+}
+
+function updateKeyspace() {
+  alphabet = activeAlphabet();
+  length = Math.max(1, Math.min(8, parseInt($("length").value) || 1));
+  keyspace = alphabet.length ? Math.pow(alphabet.length, length) : 0;
+  $("keyspace").textContent = keyspace ? fmt(keyspace) : "—";
+  $("worstCase").textContent = keyspace ? humanTime(keyspace / 1e6) : "—";
+}
+
+function generateTarget() {
+  updateKeyspace();
+  if (!alphabet.length) { alert("Pick at least one character set."); return; }
+
+  const mode = $("secretMode").value;
+  if (mode === "custom") {
+    const v = $("customSecret").value;
+    if (v.length !== length) { alert("Custom secret must be exactly " + length + " characters."); return; }
+    for (const ch of v) {
+      if (!alphabet.includes(ch)) { alert("Character '" + ch + "' is not in the selected charset."); return; }
+    }
+    target = v;
+  } else {
+    target = indexToGuess(Math.floor(Math.random() * keyspace));
+  }
+
+  $("targetStatus").textContent = (mode === "custom") ? "set: " + target : "set (hidden)";
+  $("targetStatus").className = "v ok";
+  resetRun();
+  $("startBtn").disabled = false;
+}
+
+function resetRun() {
+  stop();
+  attempts = 0;
+  seqIndex = 0;
+  $("attempts").textContent = "0";
+  $("rate").textContent = "0 /s";
+  $("elapsed").textContent = "0.0s";
+  $("result").textContent = "—";
+  $("result").className = "v";
+  $("current").textContent = "—";
+  $("current").className = "current";
+  $("barFill").style.width = "0";
+  $("barLabel").textContent = "0%";
+}
+
+function stop() {
+  running = false;
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = null;
+  $("startBtn").disabled = target == null;
+  $("stopBtn").disabled = true;
+}
+
+function start() {
+  if (!target) return;
+  running = true;
+  startTime = performance.now();
+  attempts = 0;
+  seqIndex = 0;
+  $("startBtn").disabled = true;
+  $("stopBtn").disabled = false;
+  $("result").textContent = "running…";
+  $("result").className = "v accent";
+  tick();
+}
+
+function tick() {
+  if (!running) return;
+  const order = $("order").value;
+  // Process a batch per frame so the UI stays responsive.
+  const BATCH = 20000;
+  let found = null;
+
+  for (let i = 0; i < BATCH; i++) {
+    let guess;
+    if (order === "sequential") {
+      if (seqIndex >= keyspace) { exhausted(); return; }
+      guess = indexToGuess(seqIndex);
+      seqIndex++;
+    } else {
+      guess = randomGuess();
+    }
+    attempts++;
+    if (guess === target) { found = guess; break; }
+  }
+
+  const elapsed = (performance.now() - startTime) / 1000;
+  const rate = attempts / elapsed;
+  $("attempts").textContent = fmt(attempts);
+  $("rate").textContent = fmt(Math.round(rate)) + " /s";
+  $("elapsed").textContent = elapsed.toFixed(1) + "s";
+
+  const pct = Math.min(100, (attempts / keyspace) * 100);
+  $("barFill").style.width = pct + "%";
+  $("barLabel").textContent = pct.toFixed(order === "random" ? 1 : 2) + "%";
+  $("current").textContent = found || (order === "sequential" ? indexToGuess(Math.max(0, seqIndex - 1)) : randomGuess());
+
+  if (found !== null) {
+    cracked(found, elapsed);
+    return;
+  }
+  rafId = requestAnimationFrame(tick);
+}
+
+function cracked(guess, elapsed) {
+  running = false;
+  $("current").textContent = guess;
+  $("current").className = "current found";
+  $("result").textContent = "cracked in " + humanTime(elapsed);
+  $("result").className = "v ok";
+  $("barFill").style.width = "100%";
+  stop();
+}
+
+function exhausted() {
+  running = false;
+  $("result").textContent = "keyspace exhausted, no match";
+  stop();
+}
+
+// Wiring
+$("genBtn").addEventListener("click", generateTarget);
+$("startBtn").addEventListener("click", start);
+$("stopBtn").addEventListener("click", stop);
+$("resetBtn").addEventListener("click", () => { target = null; $("targetStatus").textContent = "not set"; $("targetStatus").className = "v"; resetRun(); $("startBtn").disabled = true; });
+$("length").addEventListener("input", updateKeyspace);
+document.querySelectorAll(".cs").forEach(c => c.addEventListener("change", updateKeyspace));
+$("secretMode").addEventListener("change", e => {
+  $("customWrap").style.display = e.target.value === "custom" ? "block" : "none";
+});
+
+updateKeyspace();
+</script>
+</body>
+</html>
